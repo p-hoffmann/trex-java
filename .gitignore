@@ -1,0 +1,41 @@
+# Clojure/Leiningen
+/target/
+/classes/
+/checkouts/
+*.jar
+*.class
+pom.xml
+pom.xml.asc
+.lein-*
+.nrepl-port
+.cpcache/
+.hgignore
+.hg/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# REPL history
+.lein-repl-history
+.rebel_readline_history
+
+# Dependencies
+lib/

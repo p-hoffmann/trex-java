@@ -1,0 +1,17 @@
+jdk:
+  - openjdk21
+
+install:
+  - mkdir -p ~/.m2/repository/com/github/$REPO_OWNER/$REPO_NAME/$VERSION
+  - curl -L -o ~/.m2/repository/com/github/$REPO_OWNER/$REPO_NAME/$VERSION/$REPO_NAME-$VERSION.jar https://github.com/$REPO_OWNER/$REPO_NAME/releases/download/$VERSION/trexsql-${VERSION#v}.jar
+  - |
+    cat > ~/.m2/repository/com/github/$REPO_OWNER/$REPO_NAME/$VERSION/$REPO_NAME-$VERSION.pom << EOF
+    <?xml version="1.0" encoding="UTF-8"?>
+    <project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+      <modelVersion>4.0.0</modelVersion>
+      <groupId>com.github.$REPO_OWNER</groupId>
+      <artifactId>$REPO_NAME</artifactId>
+      <version>$VERSION</version>
+      <packaging>jar</packaging>
+    </project>
+    EOF
