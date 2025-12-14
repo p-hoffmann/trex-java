@@ -1,12 +1,11 @@
-# Trexsql - Clojure DuckDB Library for TREX
+# TrexSQL - JVM Library for TREX
 
-A JVM Clojure library wrapping DuckDB v1.4.0 via the official JDBC driver. Provides both standalone server mode (replicating existing bao behavior) and embeddable library mode with Java-friendly API.
+A JVM library providing standalone server mode and embeddable library mode with Java-friendly API.
 
 ## Prerequisites
 
 - JDK 17 or later
-- Leiningen (for development) or just the uberjar
-- DuckDB extensions in `node_modules/@trex/` or custom path
+- TrexSQL extensions in `node_modules/@trex/` or custom path
 - `TREX_SQL_PASSWORD` environment variable (for server mode)
 
 ## Quick Start
@@ -18,35 +17,35 @@ export TREX_SQL_PASSWORD=your_password
 java -jar trexsql.jar
 ```
 
-### Library Mode (Clojure)
-
-```clojure
-(require '[trexsql.core :as trexsql])
-
-(def db (trexsql/init {:extensions-path "./extensions"}))
-(trexsql/execute! db "CREATE TABLE users (id INTEGER, name VARCHAR)")
-(trexsql/query db "SELECT * FROM users")
-(trexsql/shutdown! db)
-```
-
 ### Library Mode (Java)
 
 ```java
 import com.trex.Trexsql;
 import java.util.*;
 
+// Initialize
 Map<String, Object> config = new HashMap<>();
 Object db = Trexsql.init(config);
-Trexsql.execute(db, "CREATE TABLE users (id INTEGER, name VARCHAR)");
-List<Map<String, Object>> results = Trexsql.query(db, "SELECT * FROM users");
+
+// Create cache from source database
+Map<String, Object> cacheConfig = new HashMap<>();
+cacheConfig.put("database-code", "my_source");
+cacheConfig.put("schema-name", "cdm");
+cacheConfig.put("jdbc-url", "jdbc:sqlserver://host:1433");
+cacheConfig.put("username", "user");
+cacheConfig.put("password", "pass");
+cacheConfig.put("dialect", "sql server");
+
+Trexsql.createCache(db, cacheConfig, event -> {
+    System.out.println("Progress: " + event.get("phase") + " " + event.get("table"));
+});
+
 Trexsql.shutdown(db);
 ```
 
 ## Development
 
 ```bash
-cd trexsql/trexsql
-
 # Run tests
 lein test
 
