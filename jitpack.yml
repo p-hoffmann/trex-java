@@ -1,17 +1,22 @@
 jdk:
   - openjdk21
 
+before_install:
+  - rm -f pom.xml
+  - echo "VERSION=$VERSION"
+
 install:
-  - mkdir -p ~/.m2/repository/com/github/$REPO_OWNER/$REPO_NAME/$VERSION
-  - curl -L -o ~/.m2/repository/com/github/$REPO_OWNER/$REPO_NAME/$VERSION/$REPO_NAME-$VERSION.jar https://github.com/$REPO_OWNER/$REPO_NAME/releases/download/$VERSION/trexsql-${VERSION#v}.jar
   - |
-    cat > ~/.m2/repository/com/github/$REPO_OWNER/$REPO_NAME/$VERSION/$REPO_NAME-$VERSION.pom << EOF
-    <?xml version="1.0" encoding="UTF-8"?>
-    <project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-      <modelVersion>4.0.0</modelVersion>
-      <groupId>com.github.$REPO_OWNER</groupId>
-      <artifactId>$REPO_NAME</artifactId>
-      <version>$VERSION</version>
-      <packaging>jar</packaging>
-    </project>
-    EOF
+    VER_NUM=$(echo $VERSION | sed 's/^v//')
+    URL="https://github.com/p-hoffmann/trex-java/releases/download/${VERSION}/trexsql-${VER_NUM}.jar"
+    echo "Waiting for release artifact: $URL"
+    for i in $(seq 1 40); do
+      if curl -sfL -o /tmp/trexsql.jar "$URL"; then
+        echo "Downloaded successfully"
+        break
+      fi
+      echo "Attempt $i/40 failed, waiting 30s..."
+      sleep 30
+    done
+    test -f /tmp/trexsql.jar || exit 1
+  - mvn install:install-file -Dfile=/tmp/trexsql.jar -DgroupId=com.github.p-hoffmann -DartifactId=trex-java -Dversion=$VERSION -Dpackaging=jar

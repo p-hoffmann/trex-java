@@ -1,4 +1,4 @@
-(defproject com.trex/trexsql "0.1.0"
+(defproject com.trex/trexsql "0.1.1"
   :description "Clojure DuckDB library for TREX - replaces bao with JVM implementation"
   :url "https://github.com/p-hoffmann/trex-java"
   :license {:name "Apache License 2.0"
@@ -7,7 +7,7 @@
   :repositories [["jitpack" "https://jitpack.io"]]
 
   :dependencies [[org.clojure/clojure "1.11.1"]
-                 [com.github.p-hoffmann/trexsql-java "v0.1.0"]
+                 [com.github.p-hoffmann/trexsql-java "v0.1.4"]
                  [org.clojure/tools.cli "1.1.230"]
                  [org.clojure/data.json "2.5.0"]
                  ;; HoneySQL for SQL generation (005-jdbc-batch-cache)

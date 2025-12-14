@@ -52,7 +52,9 @@ jobs:
 
       - name: Rename JAR with version
         run: |
-          cp target/trexsql-0.1.0-standalone.jar target/trexsql-${{ steps.version.outputs.version }}.jar
+          # Find the standalone jar (version may vary)
+          STANDALONE_JAR=$(ls target/trexsql-*-standalone.jar | head -1)
+          cp "$STANDALONE_JAR" target/trexsql-${{ steps.version.outputs.version }}.jar
 
       - name: Upload JAR artifact
         uses: actions/upload-artifact@v4
