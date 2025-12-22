@@ -345,3 +345,97 @@ Examples:
         (println (format "Unknown cache command: %s" subcommand))
         (println "\nUse 'trexsql cache --help' for usage information.")
         {:exit-code 1}))))
+
+;; Bundle Command
+
+(def bundle-options
+  [["-e" "--entrypoint PATH" "Path to entrypoint file (required)"
+    :missing "Entrypoint is required"]
+   ["-o" "--output PATH" "Output eszip file path (required)"
+    :missing "Output path is required"]
+   ["-c" "--checksum TYPE" "Checksum type: none, sha256, xxhash3"
+    :default nil]
+   ["-s" "--static PATTERN" "Static file glob pattern (can be repeated)"
+    :default []
+    :assoc-fn (fn [m k v] (update m k conj v))]
+   ["-t" "--timeout SECONDS" "Bundle timeout in seconds"
+    :default nil
+    :parse-fn #(Integer/parseInt %)]
+   [nil "--no-module-cache" "Disable module caching"
+    :default false]
+   [nil "--json" "Output result as JSON"
+    :default false]
+   ["-h" "--help" "Show this help message"]])
+
+(defn bundle-help []
+  "bundle - Create an eszip bundle from a TypeScript/JavaScript entrypoint
+
+Usage: trexsql bundle [options]
+
+Options:
+  -e, --entrypoint PATH    Path to entrypoint file (required)
+  -o, --output PATH        Output eszip file path (required)
+  -c, --checksum TYPE      Checksum type: none, sha256, xxhash3
+  -s, --static PATTERN     Static file glob pattern (can be repeated)
+  -t, --timeout SECONDS    Bundle timeout in seconds
+      --no-module-cache    Disable module caching
+      --json               Output result as JSON
+  -h, --help               Show this help message
+
+Examples:
+  # Basic bundle
+  trexsql bundle -e main.ts -o output.eszip
+
+  # With checksum and static files
+  trexsql bundle -e main.ts -o output.eszip -c sha256 -s \"assets/**/*\"
+
+  # With timeout
+  trexsql bundle -e main.ts -o output.eszip -t 60")
+
+(defn run-bundle [args]
+  (let [{:keys [options errors]} (parse-opts args bundle-options)]
+    (cond
+      (:help options)
+      (do
+        (println (bundle-help))
+        {:exit-code 0})
+
+      (seq errors)
+      (do
+        (doseq [err errors]
+          (println (str "Error: " err)))
+        (println "\nUse 'trexsql bundle --help' for usage information.")
+        {:exit-code 1})
+
+      :else
+      (let [{:keys [entrypoint output checksum static timeout no-module-cache json]} options
+            db (core/init {})]
+        (try
+          (let [options-map (cond-> {}
+                              checksum (assoc :checksum checksum)
+                              (seq static) (assoc :static_patterns static)
+                              no-module-cache (assoc :no_module_cache true)
+                              timeout (assoc :timeout_sec timeout))
+                options-json (when (seq options-map) (json/write-str options-map))
+                sql (if options-json
+                      (format "SELECT trex_create_bundle('%s', '%s', '%s')"
+                              (str/replace entrypoint "'" "''")
+                              (str/replace output "'" "''")
+                              (str/replace options-json "'" "''"))
+                      (format "SELECT trex_create_bundle('%s', '%s')"
+                              (str/replace entrypoint "'" "''")
+                              (str/replace output "'" "''")))
+                result (core/query db sql)
+                result-str (-> result first vals first)]
+            (if json
+              (println (json/write-str {:success (not (str/starts-with? (str result-str) "Error"))
+                                        :message result-str}))
+              (println result-str))
+            {:exit-code (if (str/starts-with? (str result-str) "Error") 1 0)})
+          (catch Exception e
+            (if json
+              (println (json/write-str {:success false :error (.getMessage e)}))
+              (println (format "Error: %s" (.getMessage e))))
+            {:exit-code 1})
+          (finally
+            (core/shutdown! db)))))))

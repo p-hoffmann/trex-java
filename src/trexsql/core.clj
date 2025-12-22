@@ -77,30 +77,64 @@
   [database]
   (ext/loaded-extensions database))
 
-(defn- print-help-and-exit
-  "Print help message and exit."
-  []
-  (println config/help-text)
-  (System/exit 0))
+(def main-help-text
+  "Usage: trexsql <command> [options]
 
-(defn- print-errors-and-exit
-  "Print validation errors and exit."
-  [errors]
-  (binding [*out* *err*]
-    (doseq [err errors]
-      (println (str "Error: " err))))
-  (System/exit 1))
+Commands:
+  serve      Start Trexas and PgWire servers (default)
+  cache      Manage DuckDB caches from source databases
+  bundle     Create an eszip bundle from TypeScript/JavaScript
 
-(defn -main
-  "Main entry point for standalone server mode."
-  [& args]
-  (let [{:keys [options errors summary]} (config/parse-args args)]
+Use 'trexsql <command> --help' for more information about a command.
+
+Examples:
+  trexsql serve --trexas-port 9876
+  trexsql cache create -s source -j \"jdbc:...\" -S schema
+  trexsql bundle -e main.ts -o output.eszip")
+
+(defn- print-main-help []
+  (println main-help-text))
+
+(defn- run-serve [args]
+  (let [{:keys [options errors]} (config/parse-args args)]
     (when (:help options)
-      (print-help-and-exit))
+      (println config/help-text)
+      (System/exit 0))
     (when (seq errors)
-      (print-errors-and-exit errors))
+      (binding [*out* *err*]
+        (doseq [err errors]
+          (println (str "Error: " err))))
+      (System/exit 1))
     (println "\uD83E\uDD95 Starting TREX")
     (let [database (init-with-servers options)]
       (add-shutdown-hook!
        #(shutdown! @current-database))
       @shutdown-promise)))
+
+(defn -main
+  "Main entry point - routes to subcommands."
+  [& args]
+  (let [command (first args)
+        sub-args (rest args)]
+    (case command
+      "serve" (run-serve sub-args)
+      "cache" (do
+                (require 'trexsql.cli)
+                (let [run-cache (resolve 'trexsql.cli/run-cache)
+                      {:keys [exit-code]} (run-cache sub-args)]
+                  (System/exit (or exit-code 0))))
+      "bundle" (do
+                 (require 'trexsql.cli)
+                 (let [run-bundle (resolve 'trexsql.cli/run-bundle)
+                       {:keys [exit-code]} (run-bundle sub-args)]
+                   (System/exit (or exit-code 0))))
+      "--help" (do (print-main-help) (System/exit 0))
+      "-h" (do (print-main-help) (System/exit 0))
+      nil (run-serve [])
+      (if (or (clojure.string/starts-with? (str command) "-")
+              (clojure.string/starts-with? (str command) "--"))
+        (run-serve args)
+        (do
+          (println (format "Unknown command: %s" command))
+          (println "\nUse 'trexsql --help' for usage information.")
+          (System/exit 1))))))
