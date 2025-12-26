@@ -16,15 +16,14 @@
       false)))
 
 (defn- extension-file?
-  "Check if a file is a DuckDB extension."
   [^File f]
   (and (.isFile f)
-       (str/ends-with? (.getName f) ".duckdb_extension")))
+       (or (str/ends-with? (.getName f) ".duckdb_extension")
+           (str/ends-with? (.getName f) ".trex"))))
 
 (defn- extension-name
-  "Extract extension name from filename."
   [^File f]
-  (str/replace (.getName f) #"\.duckdb_extension$" ""))
+  (str/replace (.getName f) #"\.(duckdb_extension|trex)$" ""))
 
 (defn find-extensions
   "Find all DuckDB extension files in the given directory.
